@@ -34,19 +34,21 @@
             // 
             // _pictureBox
             // 
-            this._pictureBox.Location = new System.Drawing.Point(17, 12);
+            this._pictureBox.Location = new System.Drawing.Point(19, 16);
             this._pictureBox.Margin = new System.Windows.Forms.Padding(0);
             this._pictureBox.Name = "_pictureBox";
-            this._pictureBox.Size = new System.Drawing.Size(800, 800);
+            this._pictureBox.Size = new System.Drawing.Size(914, 1067);
             this._pictureBox.TabIndex = 0;
             this._pictureBox.TabStop = false;
+            this._pictureBox.Click += new System.EventHandler(this.PictureBox_Click);
             // 
             // Form1
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 15F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 20F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1494, 1010);
+            this.ClientSize = new System.Drawing.Size(1707, 1055);
             this.Controls.Add(this._pictureBox);
+            this.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
             this.Name = "Form1";
             this.Text = "Mandelbrot Set";
             this.Load += new System.EventHandler(this.Form1_Load);

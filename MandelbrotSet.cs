@@ -7,15 +7,15 @@ using System.Threading.Tasks;
 
 namespace MandelbrotSet
 {
-    public static class Mandelbrot
+    public static class MandelbrotSet
     {
         /// <summary>
-        /// 
+        /// Test if provided complex point is in Mandelbrot Set
         /// </summary>
-        /// <param name="complexPoint"></param>
-        /// <param name="maxIterations"></param>
-        /// <param name="iteration"></param>
-        /// <returns></returns>
+        /// <param name="complexPoint">Complex point to test</param>
+        /// <param name="maxIterations">Total iterations to test</param>
+        /// <param name="iteration">Iterations succeeded during test. Equals to <paramref name="maxIterations"/> if test passed</param>
+        /// <returns>True if point in Mandelbrot Set, false otherwise</returns>
         public static bool Contains(Complex complexPoint, int maxIterations, out int iteration)
         {
             Complex z = Complex.Zero;
