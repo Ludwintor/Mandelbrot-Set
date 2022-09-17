@@ -127,7 +127,10 @@ namespace MandelbrotSet.Forms
         /// </summary>
         private void ResetZoomButton_Click(object sender, EventArgs e)
         {
+            if (!ValidateInput())
+                return;
             _plot.Reset();
+            RenderImage();
         }
 
         /// <summary>
