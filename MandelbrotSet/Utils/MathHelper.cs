@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Runtime.CompilerServices;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Runtime.CompilerServices;
 
 namespace MandelbrotSet.Utils
 {
@@ -37,7 +32,7 @@ namespace MandelbrotSet.Utils
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static float Lerp(float start, float end, float value)
         {
-            return start + value * (end - start);
+            return (float)Lerp((double)start, (double)end, (double)value);
         }
     }
 }

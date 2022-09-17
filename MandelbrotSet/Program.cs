@@ -1,3 +1,5 @@
+using MandelbrotSet.Forms;
+
 namespace MandelbrotSet
 {
     internal static class Program

@@ -1,10 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace MandelbrotSet.Utils
+﻿namespace MandelbrotSet.Utils
 {
     /// <summary>
     /// Provides additional methods to manipulate <see cref="Color"/>
@@ -17,35 +11,34 @@ namespace MandelbrotSet.Utils
         /// <remarks>
         /// <see href="https://en.wikipedia.org/wiki/HSL_and_HSV#HSL_to_RGB">Transform algorithm on wikipedia</see>
         /// </remarks>
-        /// <param name="hue">Must be in range [0; 360]</param>
+        /// <param name="hue">Must be in range [0; 360)</param>
         /// <param name="saturation">Must be in range [0; 1]</param>
         /// <param name="lightness">Must be in range [0; 1]</param>
         /// <returns>RGB <see cref="Color"/></returns>
         public static Color HSLToRGB(double hue, double saturation, double lightness)
         {
-            while (hue < 0d)
-                hue += 360d;
-            while (hue >= 360d)
-                hue -= 360d;
+            hue = Math.Clamp(hue, 0d, 359d);
+            saturation = Math.Clamp(saturation, 0d, 1d);
+            lightness = Math.Clamp(lightness, 0d, 1d);
             double chroma = (1d - Math.Abs(2d * lightness - 1d)) * saturation;
             double partitionHue = hue / 60d;
             double secondChroma = chroma * (1d - Math.Abs(partitionHue % 2d - 1d));
-            Color point = GetHSLPoint(chroma, secondChroma, (int)partitionHue);
-            double lightnessMatch = (lightness - chroma / 2d) * 255d;
-            return Color.FromArgb((int)(point.R + lightnessMatch),
-                                  (int)(point.G + lightnessMatch),
-                                  (int)(point.B + lightnessMatch));
+            Color rgb = RGBFromChroma(chroma, secondChroma, (int)partitionHue);
+            int lightnessMatch = (int)Math.Round((lightness - chroma / 2d) * 255d);
+            return Color.FromArgb(rgb.R + lightnessMatch,
+                                  rgb.G + lightnessMatch,
+                                  rgb.B + lightnessMatch);
         }
 
         /// <summary>
-        /// Determine point on HSL palette by two chromas and hue index
+        /// Determine raw RGB color (no lightness affected)
         /// </summary>
         /// <param name="chroma">First largest component</param>
         /// <param name="secondChroma">Second largest component</param>
         /// <param name="hueIndex">Hue index in range [0; 5]</param>
-        /// <returns>HSL point as <see cref="Color"/></returns>
+        /// <returns>RGB color without lightness</returns>
         /// <exception cref="ArgumentOutOfRangeException">If hue index outside [0; 5]</exception>
-        private static Color GetHSLPoint(double chroma, double secondChroma, int hueIndex)
+        private static Color RGBFromChroma(double chroma, double secondChroma, int hueIndex)
         {
             int r = (int)(chroma * 255d);
             int g = (int)(secondChroma * 255d);

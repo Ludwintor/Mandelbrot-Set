@@ -1,13 +1,11 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Numerics;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Numerics;
 
-namespace MandelbrotSet
+namespace MandelbrotSet.Plot
 {
-    public static class MandelbrotSet
+    /// <summary>
+    /// Represents Mandelbrot Set
+    /// </summary>
+    public static class Mandelbrot
     {
         /// <summary>
         /// Test if provided complex point is in Mandelbrot Set
