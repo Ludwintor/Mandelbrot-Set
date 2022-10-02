@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Drawing.Imaging;
 using System.Numerics;
+using System.Windows.Media.Imaging;
 using MandelbrotSet.Plot;
 using MandelbrotSet.Utils;
 using MandelbrotSet.Writers;
@@ -13,6 +14,7 @@ namespace MandelbrotSet.Forms
     /// </summary>
     public partial class Form1 : Form
     {
+        private const int GIF_FPS = 24;
         private const double SATURATION = 0.65d;
         private const double LIGHTNESS = 0.5d;
 
@@ -25,6 +27,10 @@ namespace MandelbrotSet.Forms
 
         private int _maxIterations = 100;
         private float _zoomScale = 2f;
+        private float _duration = 5f;
+        private float _speed = 3f;
+        private bool _previewGif = true;
+        private bool _isGifExport = false;
 
         /// <summary>
         /// Initialize form window
@@ -36,6 +42,7 @@ namespace MandelbrotSet.Forms
             _bitmap = bitmap;
             _stopwatch = new Stopwatch();
             _plot = new ComplexPlot(bitmap.Size, _initialStart, _initialEnd);
+            _pictureBox.Image = _bitmap;
         }
 
         /// <summary>
@@ -45,33 +52,79 @@ namespace MandelbrotSet.Forms
         {
             _iterationsText.Text = _maxIterations.ToString();
             _zoomScaleText.Text = _zoomScale.ToString();
-            RenderImage();
+            _durationText.Text = _duration.ToString();
+            _speedText.Text = _speed.ToString();
+            _previewCheckBox.Checked = _previewGif;
+            _selectPointGifLabel.Text = "";
+            RenderPicture();
+        }
+
+        private void RenderPicture()
+        {
+            SetStatus("Rendering...", Color.Olive);
+            _stopwatch.Restart();
+            RenderImage(_bitmap);
+            _stopwatch.Stop();
+            SetStatus("Render complete", Color.Green);
+            SetTimerLabel(_stopwatch.ElapsedMilliseconds);
+            DisplayPicture(_bitmap);
+        }
+
+        private void DisplayPicture(Bitmap bitmap)
+        {
+            _pictureBox.Image = bitmap;
+            _pictureBox.Refresh();
         }
 
         /// <summary>
         /// Render Mandelbrot set and show it
         /// </summary>
-        private void RenderImage()
+        private void RenderImage(Bitmap bitmap)
         {
-            SetStatus("Rendering...", Color.Olive);
-            using (BitmapWriter writer = new(_bitmap))
+            using BitmapWriter writer = new(bitmap);
+            for (int y = 0; y < bitmap.Height; y++)
+                for (int x = 0; x < bitmap.Width; x++)
+                {
+                    Complex point = _plot.PixelPointToPlotPoint(new Point(x, y));
+                    Color color = Mandelbrot.Contains(point, _maxIterations, out int iterations) ?
+                                  Color.Black :
+                                  ColorHelper.HSLToRGB(360d * ((double)iterations / _maxIterations),
+                                                       SATURATION, LIGHTNESS);
+                    writer.Write(x, y, color);
+                }
+        }
+
+        /// <summary>
+        /// Renders GIF file in provided output
+        /// </summary>
+        /// <param name="output">Stream to save GIF file</param>
+        /// <param name="start">Start zoom from this point on plot</param>
+        private void RenderGif(Stream output, Point start)
+        {
+            _plot.Reset();
+            _plot.Zoom(start, 1f);
+            Bitmap bitmap = new(_pictureBox.Width, _pictureBox.Height);
+            Point center = new(bitmap.Width / 2, bitmap.Height / 2);
+            float frameTime = 1f / GIF_FPS;
+            int totalFrames = (int)MathF.Ceiling(GIF_FPS * _duration);
+            float delta = _speed / 10f * frameTime;
+            int renderedFrames = 0;
+            SetStatus("Rendering GIF...", Color.Olive);
+            _stopwatch.Restart();
+            using GifWriter writer = new(output, 0);
+            do
             {
-                _stopwatch.Restart();
-                for (int y = 0; y < _bitmap.Height; y++)
-                    for (int x = 0; x < _bitmap.Width; x++)
-                    {
-                        Complex point = _plot.PixelPointToPlotPoint(new Point(x, y));
-                        Color color = Mandelbrot.Contains(point, _maxIterations, out int iterations) ? 
-                                      Color.Black : 
-                                      ColorHelper.HSLToRGB(360d * ((double)iterations / _maxIterations),
-                                                           SATURATION, LIGHTNESS);
-                        writer.Write(x, y, color);
-                    }
-                _stopwatch.Stop();
-            }
-            SetStatus("Render complete", Color.Green);
-            _timerLabel.Text = $"{_stopwatch.ElapsedMilliseconds / 1000f:0.000}s";
-            _pictureBox.Image = _bitmap;
+                RenderImage(bitmap);
+                writer.WriteFrame(bitmap, (int)(frameTime * 1000d));
+                if (_previewGif)
+                    DisplayPicture(bitmap);
+                _plot.Zoom(center, 1f + delta);
+                renderedFrames++;
+            } while (renderedFrames < totalFrames);
+            _stopwatch.Stop();
+            SetTimerLabel(_stopwatch.ElapsedMilliseconds);
+            SetStatus("GIF render complete", Color.Green);
+            _isGifExport = false;
         }
 
         /// <summary>
@@ -107,7 +160,7 @@ namespace MandelbrotSet.Forms
         {
             if (!ValidateInput())
                 return;
-            RenderImage();
+            RenderPicture();
         }
 
         /// <summary>
@@ -117,9 +170,24 @@ namespace MandelbrotSet.Forms
         {
             if (!ValidateInput())
                 return;
-            Point zoomPoint = _pictureBox.PointToClient(MousePosition);
-            _plot.Zoom(zoomPoint, _zoomScale);
-            RenderImage();
+            Point clickPoint = _pictureBox.PointToClient(MousePosition);
+            if (_isGifExport)
+            {
+                _selectPointGifLabel.Text = "";
+                SaveFileDialog saveDialog = new()
+                {
+                    Filter = "Gif image|*.gif",
+                    Title = "Save GIF file"
+                };
+                DialogResult result = saveDialog.ShowDialog();
+                if (result == DialogResult.OK)
+                    RenderGif(saveDialog.OpenFile(), clickPoint);
+            }
+            else
+            {
+                _plot.Zoom(clickPoint, _zoomScale);
+                RenderPicture();
+            }
         }
 
         /// <summary>
@@ -130,7 +198,18 @@ namespace MandelbrotSet.Forms
             if (!ValidateInput())
                 return;
             _plot.Reset();
-            RenderImage();
+            RenderPicture();
+        }
+
+        /// <summary>
+        /// Called when _exportButton clicked
+        /// </summary>
+        private void ExportButton_Click(object sender, EventArgs e)
+        {
+            _plot.Reset();
+            RenderPicture();
+            _selectPointGifLabel.Text = "Select point on image to zoom from";
+            _isGifExport = true;
         }
 
         /// <summary>
@@ -159,10 +238,11 @@ namespace MandelbrotSet.Forms
         /// </summary>
         private void ZoomScaleText_Validating(object sender, CancelEventArgs e)
         {
+            _zoomScaleText.Text = _zoomScaleText.Text.Replace(',', '.');
             if (!float.TryParse(_zoomScaleText.Text, out float zoom) || zoom <= 1f)
             {
                 e.Cancel = true;
-                _errorProvider.SetError(_zoomScaleText, "Enter an decimal number greater than 1");
+                _errorProvider.SetError(_zoomScaleText, "Enter a decimal number greater than 1");
             }
         }
 
@@ -173,6 +253,52 @@ namespace MandelbrotSet.Forms
         {
             _zoomScale = float.Parse(_zoomScaleText.Text);
             _errorProvider.SetError(_zoomScaleText, "");
+        }
+
+        private void DurationText_Validating(object sender, CancelEventArgs e)
+        {
+            _durationText.Text = _durationText.Text.Replace(',', '.');
+            if (!float.TryParse(_durationText.Text, out float duration) || duration <= 0)
+            {
+                e.Cancel = true;
+                _errorProvider.SetError(_durationText, "Enter a decimal number greater than 0");
+            }
+        }
+
+        private void DurationText_Validated(object sender, EventArgs e)
+        {
+            _duration = float.Parse(_durationText.Text);
+            _errorProvider.SetError(_durationText, "");
+        }
+
+        private void SpeedText_Validating(object sender, CancelEventArgs e)
+        {
+            _speedText.Text = _speedText.Text.Replace(',', '.');
+            if (!float.TryParse(_speedText.Text, out float speed) || speed <= 0)
+            {
+                e.Cancel = true;
+                _errorProvider.SetError(_speedText, "Enter a decimal number greater than 0");
+            }
+        }
+
+        private void SpeedText_Validated(object sender, EventArgs e)
+        {
+            _speed = float.Parse(_speedText.Text);
+            _errorProvider.SetError(_speedText, "");
+        }
+
+        private void PreviewCheckBox_CheckedChanged(object sender, EventArgs e)
+        {
+            _previewGif = _previewCheckBox.Checked;
+        }
+
+        /// <summary>
+        /// Sets text on timer label
+        /// </summary>
+        /// <param name="milliseconds">elapsed time in milliseconds</param>
+        private void SetTimerLabel(long milliseconds)
+        {
+            _timerLabel.Text = $"{milliseconds / 1000f:0.000}s";
         }
     }
 }

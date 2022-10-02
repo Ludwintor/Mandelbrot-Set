@@ -11,11 +11,9 @@ namespace MandelbrotSet.Plot
         private readonly Size _pixelSize;
         private readonly Complex _initialMin;
         private readonly Complex _initialMax;
-        private Complex _min;
-        private Complex _max;
 
-        public Complex Min => _min;
-        public Complex Max => _max;
+        public Complex Min { get; set; }
+        public Complex Max { get; set; }
 
         /// <summary>
         /// Creates new complex plot
@@ -28,8 +26,8 @@ namespace MandelbrotSet.Plot
             _pixelSize = pixelSize;
             _initialMin = initialMin;
             _initialMax = initialMax;
-            _min = _initialMin;
-            _max = _initialMax;
+            Min = _initialMin;
+            Max = _initialMax;
         }
 
         /// <summary>
@@ -49,8 +47,8 @@ namespace MandelbrotSet.Plot
         /// <returns>Plot coordinate</returns>
         public Complex PixelPointToPlotPoint(PointF point)
         {
-            double real = MathHelper.Lerp(_min.Real, _max.Real, point.X / _pixelSize.Width);
-            double imaginary = MathHelper.Lerp(_min.Imaginary, _max.Imaginary, point.Y / _pixelSize.Height);
+            double real = MathHelper.Lerp(Min.Real, Max.Real, point.X / _pixelSize.Width);
+            double imaginary = MathHelper.Lerp(Min.Imaginary, Max.Imaginary, point.Y / _pixelSize.Height);
             return new Complex(real, imaginary);
         }
 
@@ -64,17 +62,17 @@ namespace MandelbrotSet.Plot
         /// <param name="zoomScale">How strong zoom is</param>
         public void Zoom(Point zoomPoint, float zoomScale)
         {
-            Complex newMin = ZoomBorder(zoomPoint, -zoomScale);
-            Complex newMax = ZoomBorder(zoomPoint, zoomScale);
-            _min = newMin;
-            _max = newMax;
+            Zoom(PixelPointToPlotPoint(zoomPoint), zoomScale);
+        }
 
-            Complex ZoomBorder(Point zoomPoint, float zoomScale)
-            {
-                PointF pixelBorder = new(zoomPoint.X + _pixelSize.Width * 0.5f / zoomScale,
-                                         zoomPoint.Y + _pixelSize.Height * 0.5f / zoomScale);
-                return PixelPointToPlotPoint(pixelBorder);
-            }
+        public void Zoom(Complex zoomCoordinate, float zoomScale)
+        {
+            double realDiff = Max.Real - Min.Real;
+            double imagDiff = Max.Imaginary - Min.Imaginary;
+            Min = new(zoomCoordinate.Real - realDiff * 0.5d / zoomScale,
+                      zoomCoordinate.Imaginary - imagDiff * 0.5d / zoomScale);
+            Max = new(zoomCoordinate.Real + realDiff * 0.5d / zoomScale,
+                      zoomCoordinate.Imaginary + imagDiff * 0.5d / zoomScale);
         }
 
         /// <summary>
@@ -82,8 +80,8 @@ namespace MandelbrotSet.Plot
         /// </summary>
         public void Reset()
         {
-            _min = _initialMin;
-            _max = _initialMax;
+            Min = _initialMin;
+            Max = _initialMax;
         }
     }
 }

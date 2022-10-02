@@ -18,8 +18,12 @@ namespace MandelbrotSet.Writers
         private readonly BitmapData _data;
 
         /// <summary>
+        /// Count of color values per one pixel
+        /// </summary>
+        private readonly int _offset;
+
+        /// <summary>
         /// Create instance of BitmapWriter and immediately lock bits for writing 
-        /// 
         /// </summary>
         /// <param name="bitmap"></param>
         public BitmapWriter(Bitmap bitmap)
@@ -27,6 +31,7 @@ namespace MandelbrotSet.Writers
             _bitmap = bitmap;
             Rectangle rect = new(0, 0, _bitmap.Width, _bitmap.Height);
             _data = bitmap.LockBits(rect, ImageLockMode.WriteOnly, _bitmap.PixelFormat);
+            _offset = DetermineFormatOffset();
         }
 
         /// <summary>
@@ -37,13 +42,12 @@ namespace MandelbrotSet.Writers
         /// <param name="color">New pixel color</param>
         public unsafe void Write(int x, int y, Color color)
         {
-            int offset = DetermineFormatOffset();
-            byte* rgbValues = (byte*)_data.Scan0 + y * Math.Abs(_data.Stride) + x * offset;
-            // ToArgb() returns int as 0xAARRGGBB
+            byte* rgbValues = (byte*)_data.Scan0 + y * Math.Abs(_data.Stride) + x * _offset;
+            // ToArgb() returns int as 0xAARRGGBB which will be shifted after
             int hexColor = color.ToArgb();
-            for (int i = 0; i < offset; i++)
-                // 0xFF is a mask for right most hexes of color so we take colors in that order: Blue, Green, Red, Alpha
-                rgbValues[i] = (byte)(0xFF & (hexColor >> 8 * i));
+            for (int i = 0; i < _offset; i++)
+                // Shift bits to right and cast to byte so we take colors in that order: Blue, Green, Red, Alpha
+                rgbValues[i] = (byte)(hexColor >> 8 * i);
         }
 
         /// <inheritdoc/>
